@@ -7,7 +7,7 @@ import matplotlib.pyplot as plt
 # Configura tus credenciales de Spotify (se obtiene desde Streamlit Secrets)
 CLIENT_ID = st.secrets["spotify"]["client_id"]
 CLIENT_SECRET = st.secrets["spotify"]["client_secret"]
-REDIRECT_URI = 'http://localhost:8501/'
+REDIRECT_URI = 'https://solenme2-test.streamlit.app'
 
 # Configuración de autenticación con OAuth
 scope = 'user-top-read user-read-recently-played user-read-private'
