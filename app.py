@@ -9,6 +9,7 @@ CLIENT_ID = st.secrets["spotify"]["client_id"]
 CLIENT_SECRET = st.secrets["spotify"]["client_secret"]
 REDIRECT_URI = 'https://solenme2-test.streamlit.app'
 
+
 # Configuración de autenticación con OAuth
 scope = 'user-top-read user-read-recently-played user-read-private'
 sp_oauth = SpotifyOAuth(client_id=CLIENT_ID, 
@@ -22,6 +23,7 @@ st.title("Estadísticas Personales de Spotify")
 # Función para autenticar al usuario
 def autenticar_usuario():
     if 'token_info' not in st.session_state:
+        # Si no hay token, pedir al usuario que inicie sesión
         auth_url = sp_oauth.get_authorize_url()
         st.markdown(f"[Haz clic aquí para iniciar sesión en Spotify]({auth_url})")
     else:
@@ -118,13 +120,20 @@ def mostrar_informacion_usuario():
 
 # Función principal
 def main():
-    if 'logout' in st.session_state and st.session_state['logout']:
-        st.warning("Has cerrado sesión. Recarga la página para iniciar sesión nuevamente.")
-        st.stop()  # Detiene la ejecución
-
+    # Verificar si hay un código de autorización en la URL
+    if 'code' in st.experimental_get_query_params():
+        code = st.experimental_get_query_params()['code'][0]
+        try:
+            token_info = sp_oauth.get_access_token(code)
+            st.session_state['token_info'] = token_info
+            st.experimental_rerun()  # Recargar la página para actualizar la sesión
+        except Exception as e:
+            st.error(f"Error al obtener el token: {e}")
+    
     autenticar_usuario()  # Intentamos autenticar al usuario
     mostrar_informacion_usuario()  # Mostramos la información del usuario si está autenticado
 
 # Ejecutar la aplicación
 if __name__ == "__main__":
     main()
+
