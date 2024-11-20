@@ -115,6 +115,7 @@ def mostrar_informacion_usuario():
 
     else:
         st.warning("Por favor, inicia sesión para ver tus estadísticas.")
+
 # Función principal
 def main():
     # Verificar si hay un código de autorización en la URL
@@ -122,6 +123,7 @@ def main():
     if 'code' in query_params:
         code = query_params['code']
         try:
+            # Obtener el token utilizando el código de autorización
             token_info = sp_oauth.get_access_token(code)
             st.session_state['token_info'] = token_info
             st.rerun()  # Recargar la página para actualizar la sesión
