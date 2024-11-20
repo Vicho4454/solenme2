@@ -115,12 +115,12 @@ def mostrar_informacion_usuario():
 
     else:
         st.warning("Por favor, inicia sesión para ver tus estadísticas.")
-
 # Función principal
 def main():
     # Verificar si hay un código de autorización en la URL
-    if 'code' in st.query_params():
-        code = st.query_params()['code'][0]
+    query_params = st.query_params  # Usamos st.query_params en lugar de experimental_get_query_params
+    if 'code' in query_params:
+        code = query_params['code']
         try:
             token_info = sp_oauth.get_access_token(code)
             st.session_state['token_info'] = token_info
