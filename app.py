@@ -7,7 +7,8 @@ import matplotlib.pyplot as plt
 # Configura tus credenciales de Spotify (se obtiene desde Streamlit Secrets)
 CLIENT_ID = st.secrets["spotify"]["client_id"]
 CLIENT_SECRET = st.secrets["spotify"]["client_secret"]
-REDIRECT_URI = 'https://solenme2-test.streamlit.app'
+REDIRECT_URI = 'https://solenme2-test.streamlit.app
+
 # Configuración de autenticación con OAuth
 scope = 'user-top-read user-read-recently-played user-read-private'
 sp_oauth = SpotifyOAuth(client_id=CLIENT_ID, 
@@ -49,69 +50,73 @@ def mostrar_informacion_usuario():
         token_info = st.session_state['token_info']
         sp = spotipy.Spotify(auth=token_info['access_token'])
 
-        # Mostrar información del usuario
-        user_profile = sp.me()
-        st.header(f"¡Hola, {user_profile.get('display_name', 'Usuario')}!")
-        
-        # Mostrar imagen de perfil si está disponible
-        if user_profile.get('images') and len(user_profile['images']) > 0:
-            st.image(user_profile['images'][0]['url'], width=100)
-        else:
-            st.write("No hay imagen de perfil disponible.")
-        
-        # Botón para cambiar de cuenta
-        if st.sidebar.button("Cambiar cuenta"):
-            cambiar_cuenta()
+        try:
+            # Mostrar información del usuario
+            user_profile = sp.me()
+            st.header(f"¡Hola, {user_profile.get('display_name', 'Usuario')}!")
+            
+            # Mostrar imagen de perfil si está disponible
+            if user_profile.get('images') and len(user_profile['images']) > 0:
+                st.image(user_profile['images'][0]['url'], width=100)
+            else:
+                st.write("No hay imagen de perfil disponible.")
+            
+            # Botón para cambiar de cuenta
+            if st.sidebar.button("Cambiar cuenta"):
+                cambiar_cuenta()
 
-        # Botón para cerrar sesión
-        if st.sidebar.button("Cerrar sesión"):
-            cerrar_sesion()
+            # Botón para cerrar sesión
+            if st.sidebar.button("Cerrar sesión"):
+                cerrar_sesion()
 
-        # Obtener las canciones más escuchadas
-        st.subheader("Tus canciones más escuchadas")
-        top_tracks = sp.current_user_top_tracks(limit=10, time_range='medium_term')
-        canciones = []
-        for track in top_tracks['items']:
-            canciones.append({
-                'Canción': track['name'],
-                'Artista': ', '.join([artist['name'] for artist in track['artists']]),
-                'Popularidad': track['popularity'],
-                'URL': track['external_urls']['spotify']
-            })
-        df_canciones = pd.DataFrame(canciones)
-        st.dataframe(df_canciones)
+            # Obtener las canciones más escuchadas
+            st.subheader("Tus canciones más escuchadas")
+            top_tracks = sp.current_user_top_tracks(limit=10, time_range='medium_term')
+            canciones = []
+            for track in top_tracks['items']:
+                canciones.append({
+                    'Canción': track['name'],
+                    'Artista': ', '.join([artist['name'] for artist in track['artists']]),
+                    'Popularidad': track['popularity'],
+                    'URL': track['external_urls']['spotify']
+                })
+            df_canciones = pd.DataFrame(canciones)
+            st.dataframe(df_canciones)
 
-        # Graficar las canciones más escuchadas
-        st.subheader("Gráfico de Popularidad")
-        fig, ax = plt.subplots()
-        df_canciones.plot(kind='bar', x='Canción', y='Popularidad', ax=ax, color='green', legend=False)
-        ax.set_ylabel("Popularidad")
-        ax.set_title("Popularidad de tus canciones más escuchadas")
-        plt.xticks(rotation=45, ha='right')
-        st.pyplot(fig)
+            # Graficar las canciones más escuchadas
+            st.subheader("Gráfico de Popularidad")
+            fig, ax = plt.subplots()
+            df_canciones.plot(kind='bar', x='Canción', y='Popularidad', ax=ax, color='green', legend=False)
+            ax.set_ylabel("Popularidad")
+            ax.set_title("Popularidad de tus canciones más escuchadas")
+            plt.xticks(rotation=45, ha='right')
+            st.pyplot(fig)
 
-        # Obtener los artistas más escuchados
-        st.subheader("Tus artistas más escuchados")
-        top_artists = sp.current_user_top_artists(limit=10, time_range='medium_term')
-        artistas = []
-        for artist in top_artists['items']:
-            artistas.append({
-                'Artista': artist['name'],
-                'Popularidad': artist['popularity'],
-                'Géneros': ', '.join(artist['genres']),
-                'URL': artist['external_urls']['spotify']
-            })
-        df_artistas = pd.DataFrame(artistas)
-        st.dataframe(df_artistas)
+            # Obtener los artistas más escuchados
+            st.subheader("Tus artistas más escuchados")
+            top_artists = sp.current_user_top_artists(limit=10, time_range='medium_term')
+            artistas = []
+            for artist in top_artists['items']:
+                artistas.append({
+                    'Artista': artist['name'],
+                    'Popularidad': artist['popularity'],
+                    'Géneros': ', '.join(artist['genres']),
+                    'URL': artist['external_urls']['spotify']
+                })
+            df_artistas = pd.DataFrame(artistas)
+            st.dataframe(df_artistas)
 
-        # Graficar los artistas más escuchados
-        st.subheader("Gráfico de Popularidad de Artistas")
-        fig, ax = plt.subplots()
-        df_artistas.plot(kind='bar', x='Artista', y='Popularidad', ax=ax, color='orange', legend=False)
-        ax.set_ylabel("Popularidad")
-        ax.set_title("Popularidad de tus artistas más escuchados")
-        plt.xticks(rotation=45, ha='right')
-        st.pyplot(fig)
+            # Graficar los artistas más escuchados
+            st.subheader("Gráfico de Popularidad de Artistas")
+            fig, ax = plt.subplots()
+            df_artistas.plot(kind='bar', x='Artista', y='Popularidad', ax=ax, color='orange', legend=False)
+            ax.set_ylabel("Popularidad")
+            ax.set_title("Popularidad de tus artistas más escuchados")
+            plt.xticks(rotation=45, ha='right')
+            st.pyplot(fig)
+
+        except Exception as e:
+            st.error(f"Ocurrió un error al obtener la información del usuario: {e}")
 
     else:
         st.warning("Por favor, inicia sesión para ver tus estadísticas.")
