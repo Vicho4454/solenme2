@@ -8,8 +8,6 @@ import matplotlib.pyplot as plt
 CLIENT_ID = st.secrets["spotify"]["client_id"]
 CLIENT_SECRET = st.secrets["spotify"]["client_secret"]
 REDIRECT_URI = 'https://solenme2-test.streamlit.app'
-
-
 # Configuración de autenticación con OAuth
 scope = 'user-top-read user-read-recently-played user-read-private'
 sp_oauth = SpotifyOAuth(client_id=CLIENT_ID, 
@@ -36,13 +34,13 @@ def cerrar_sesion():
     if 'token_info' in st.session_state:
         del st.session_state['token_info']  # Eliminar token de la sesión
     st.session_state['logout'] = True  # Marcar el estado de cierre de sesión
-    st.experimental_rerun()  # Recarga la página
+    st.rerun()  # Recarga la página
 
 # Función para cambiar de cuenta
 def cambiar_cuenta():
     cerrar_sesion()  # Eliminar el token y resetear la sesión
     st.session_state['change_account'] = True  # Marcar que el usuario quiere cambiar de cuenta
-    st.experimental_rerun()  # Recargar la página
+    st.rerun()  # Recargar la página
 
 # Verificar si el usuario está autenticado
 def mostrar_informacion_usuario():
@@ -126,7 +124,7 @@ def main():
         try:
             token_info = sp_oauth.get_access_token(code)
             st.session_state['token_info'] = token_info
-            st.experimental_rerun()  # Recargar la página para actualizar la sesión
+            st.rerun()  # Recargar la página para actualizar la sesión
         except Exception as e:
             st.error(f"Error al obtener el token: {e}")
     
@@ -136,4 +134,3 @@ def main():
 # Ejecutar la aplicación
 if __name__ == "__main__":
     main()
-
