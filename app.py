@@ -119,8 +119,8 @@ def mostrar_informacion_usuario():
 # Función principal
 def main():
     # Verificar si hay un código de autorización en la URL
-    if 'code' in st.get_query_params():
-        code = st.get_query_params()['code'][0]
+    if 'code' in st.query_params():
+        code = st.query_params()['code'][0]
         try:
             token_info = sp_oauth.get_access_token(code)
             st.session_state['token_info'] = token_info
