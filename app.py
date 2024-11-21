@@ -50,6 +50,8 @@ def cerrar_sesion():
         cookies.save()  # Guardar cambios en las cookies
     st.session_state['authenticated'] = False
     st.success("Has cerrado sesión. Puedes iniciar sesión nuevamente.")
+    st.experimental_set_query_params()  # Limpiar la URL de parámetros
+    st.session_state['reload'] = True  # Bandera para recargar la página
 
 # Función para cambiar de cuenta
 def cambiar_cuenta():
