@@ -17,7 +17,7 @@ if not cookies.ready():
 # Configura tus credenciales de Spotify (deberías obtenerlas de Streamlit Secrets)
 CLIENT_ID = st.secrets["spotify"]["client_id"]
 CLIENT_SECRET = st.secrets["spotify"]["client_secret"]
-REDIRECT_URI = 'https://solenme2-test.streamlit.app'  # Asegúrate de que esta sea la URI correcta
+REDIRECT_URI = 'https://solemne2-test.streamlit.app/'  # Asegúrate de que esta sea la URI correcta
 
 # Configuración de autenticación con OAuth
 scope = 'user-top-read user-read-recently-played user-read-private'
@@ -49,13 +49,16 @@ def cerrar_sesion():
         cookies.save()  # Guardar cambios en las cookies
     if 'authenticated' in st.session_state:
         del st.session_state['authenticated']
+    
+    # Actualiza la URL eliminando los parámetros para evitar la redirección automática
     st.experimental_set_query_params()  # Eliminar parámetros de la URL
-    st.experimental_rerun()  # Recargar la página
+    # Recargar la página
+    st.session_state['reload'] = True  # Bandera para recargar la página
 
 # Función para cambiar de cuenta
 def cambiar_cuenta():
     cerrar_sesion()  # Eliminar el token y resetear la sesión
-    st.experimental_rerun()  # Recargar la página
+    st.session_state['reload'] = True  # Recargar la página
 
 # Verificar si el usuario está autenticado
 def mostrar_informacion_usuario():
@@ -149,7 +152,7 @@ def main():
             cookies['token_info'] = json.dumps(token_info)
             cookies.save()  # Guardar cambios en las cookies
             st.session_state['authenticated'] = True
-            st.experimental_rerun()  # Recargar la página para actualizar la sesión
+            st.session_state['reload'] = True  # Bandera para recargar la página
         except Exception as e:
             st.error(f"Error al obtener el token: {e}")
 
@@ -158,7 +161,8 @@ def main():
 
 # Ejecutar la aplicación
 if __name__ == "__main__":
+    if 'reload' in st.session_state and st.session_state['reload']:
+        # Recarga la página si la bandera 'reload' está activada
+        del st.session_state['reload']
+        st.experimental_rerun()
     main()
-
-
-
