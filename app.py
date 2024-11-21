@@ -17,7 +17,7 @@ if not cookies.ready():
 # Configura tus credenciales de Spotify (deberías obtenerlas de Streamlit Secrets)
 CLIENT_ID = st.secrets["spotify"]["client_id"]
 CLIENT_SECRET = st.secrets["spotify"]["client_secret"]
-REDIRECT_URI = 'https://solemne2-test.streamlit.app/'  # Asegúrate de que esta sea la URI correcta
+REDIRECT_URI = 'https://solenme2-test.streamlit.app'  # Asegúrate de que esta sea la URI correcta
 
 # Configuración de autenticación con OAuth
 scope = 'user-top-read user-read-recently-played user-read-private'
