@@ -13,10 +13,10 @@ import matplotlib.pyplot as plt
 from streamlit_cookies_manager import EncryptedCookieManager
 
 # Configuración de cookies con el password de encriptación desde secrets
-password = st.secrets["cookies"]["password"]
+passwrd = st.secrets["cookies"]["password"]
 
 # Inicializa el administrador de cookies
-cookies = EncryptedCookieManager(prefix="spotify_app", password=password)
+cookies = EncryptedCookieManager(prefix="spotify_app", password=passwrd)
 if not cookies.ready():
     st.stop()  # Esperar a que las cookies estén listas
 
