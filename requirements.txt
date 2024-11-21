@@ -4,3 +4,4 @@ pandas
 matplotlib
 requests
 streamlit-cookies-manager
+json
