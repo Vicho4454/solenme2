@@ -52,7 +52,7 @@ def cerrar_sesion():
     
     # Actualiza la URL eliminando los parámetros para evitar la redirección automática
     st.experimental_set_query_params()  # Eliminar parámetros de la URL
-    # Recargar la página
+    # Recargar la página estableciendo una bandera de recarga
     st.session_state['reload'] = True  # Bandera para recargar la página
 
 # Función para cambiar de cuenta
@@ -164,5 +164,5 @@ if __name__ == "__main__":
     if 'reload' in st.session_state and st.session_state['reload']:
         # Recarga la página si la bandera 'reload' está activada
         del st.session_state['reload']
-        st.experimental_rerun()
+        st.experimental_set_query_params()  # Limpiar la URL de parámetros
     main()
