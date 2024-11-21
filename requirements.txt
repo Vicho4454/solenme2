@@ -3,4 +3,4 @@ spotipy
 pandas
 matplotlib
 requests
-streamlit_cookies_manager
+streamlit-cookies-manager
