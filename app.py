@@ -7,10 +7,10 @@ import matplotlib.pyplot as plt
 from streamlit_cookies_manager import EncryptedCookieManager
 
 # Configuración de cookies con el password de encriptación desde secrets
-passwrd = st.secrets["cookies"]["password"]
+password = st.secrets["cookies"]["password"]
 
 # Inicializa el administrador de cookies
-cookies = EncryptedCookieManager(prefix="spotify_app", password=passwrd)
+cookies = EncryptedCookieManager(prefix="spotify_app", password=password)
 if not cookies.ready():
     st.stop()  # Esperar a que las cookies estén listas
 
@@ -73,4 +73,92 @@ def mostrar_informacion_usuario():
             if user_profile.get('images') and len(user_profile['images']) > 0:
                 st.image(user_profile['images'][0]['url'], width=100)
             else:
-                st.write("No hay imagen de
+                st.write("No hay imagen de perfil disponible.")
+            
+            # Botón para cambiar de cuenta
+            if st.sidebar.button("Cambiar cuenta"):
+                cambiar_cuenta()
+
+            # Botón para cerrar sesión
+            if st.sidebar.button("Cerrar sesión"):
+                cerrar_sesion()
+
+            # Obtener las canciones más escuchadas
+            st.subheader("Tus canciones más escuchadas")
+            top_tracks = sp.current_user_top_tracks(limit=10, time_range='medium_term')
+            canciones = []
+            for track in top_tracks['items']:
+                canciones.append({
+                    'Canción': track['name'],
+                    'Artista': ', '.join([artist['name'] for artist in track['artists']]),
+                    'Popularidad': track['popularity'],
+                    'URL': track['external_urls']['spotify']
+                })
+            df_canciones = pd.DataFrame(canciones)
+            st.dataframe(df_canciones)
+
+            # Graficar las canciones más escuchadas
+            st.subheader("Gráfico de Popularidad")
+            fig, ax = plt.subplots()
+            df_canciones.plot(kind='bar', x='Canción', y='Popularidad', ax=ax, color='green', legend=False)
+            ax.set_ylabel("Popularidad")
+            ax.set_title("Popularidad de tus canciones más escuchadas")
+            plt.xticks(rotation=45, ha='right')
+            st.pyplot(fig)
+
+            # Obtener los artistas más escuchados
+            st.subheader("Tus artistas más escuchados")
+            top_artists = sp.current_user_top_artists(limit=10, time_range='medium_term')
+            artistas = []
+            for artist in top_artists['items']:
+                artistas.append({
+                    'Artista': artist['name'],
+                    'Popularidad': artist['popularity'],
+                    'Géneros': ', '.join(artist['genres']),
+                    'URL': artist['external_urls']['spotify']
+                })
+            df_artistas = pd.DataFrame(artistas)
+            st.dataframe(df_artistas)
+
+            # Graficar los artistas más escuchados
+            st.subheader("Gráfico de Popularidad de Artistas")
+            fig, ax = plt.subplots()
+            df_artistas.plot(kind='bar', x='Artista', y='Popularidad', ax=ax, color='orange', legend=False)
+            ax.set_ylabel("Popularidad")
+            ax.set_title("Popularidad de tus artistas más escuchados")
+            plt.xticks(rotation=45, ha='right')
+            st.pyplot(fig)
+
+        except Exception as e:
+            st.error(f"Ocurrió un error al obtener la información del usuario: {e}")
+
+    else:
+        st.warning("Por favor, inicia sesión para ver tus estadísticas.")
+
+# Función principal
+def main():
+    # Verificar si hay un código de autorización en la URL
+    query_params = st.experimental_get_query_params()  # Obtener parámetros de la URL
+    if 'code' in query_params and not st.session_state.get('authenticated', False):
+        code = query_params['code'][0]
+        try:
+            # Obtener el token utilizando el código de autorización
+            token_info = sp_oauth.get_access_token(code)
+            
+            # Guardar el token_info en las cookies como JSON
+            cookies['token_info'] = json.dumps(token_info)
+            cookies.save()  # Guardar cambios en las cookies
+            st.session_state['authenticated'] = True
+            st.experimental_rerun()  # Recargar la página para actualizar la sesión
+        except Exception as e:
+            st.error(f"Error al obtener el token: {e}")
+
+    autenticar_usuario()  # Intentamos autenticar al usuario
+    mostrar_informacion_usuario()  # Mostramos la información del usuario si está autenticado
+
+# Ejecutar la aplicación
+if __name__ == "__main__":
+    main()
+
+
+
