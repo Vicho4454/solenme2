@@ -1,34 +1,44 @@
-import streamlit as st
 import json
+import streamlit as st
+import spotipy
+from spotipy.oauth2 import SpotifyOAuth
 from streamlit_cookies_manager import EncryptedCookieManager
 
-# Initialize cookie manager
+# Configuración de cookies
 password = st.secrets["cookies"]["password"]
 cookies = EncryptedCookieManager(prefix="spotify_app", password=password)
 if not cookies.ready():
     st.stop()
 
-def show_login():
-    st.title("Login to Spotify")
+# Configura tus credenciales de Spotify
+CLIENT_ID = st.secrets["spotify"]["client_id"]
+CLIENT_SECRET = st.secrets["spotify"]["client_secret"]
+REDIRECT_URI = 'https://solenme2-test.streamlit.app'
+scope = 'user-top-read user-read-recently-played user-read-private'
+sp_oauth = SpotifyOAuth(client_id=CLIENT_ID, client_secret=CLIENT_SECRET, redirect_uri=REDIRECT_URI, scope=scope)
 
+def mostrar_login():
+    st.title("Inicio de Sesión en Spotify")
+    
     if 'token_info' not in cookies or not cookies['token_info']:
-        # Display login form
-        email = st.text_input("Email")
-        password = st.text_input("Password", type="password")
-        
-        if st.button("Login"):
-            # Here you would normally authenticate with Spotify
-            # For demonstration, we will just simulate a successful login
-            if email == "user@example.com" and password == "password123":
-                # Simulate storing token info in cookies
-                token_info = {"access_token": "dummy_token"}
-                cookies['token_info'] = json.dumps(token_info)
-                cookies.save()
-                st.session_state['authenticated'] = True
-                st.experimental_rerun()  # Reload the app to show statistics
-            else:
-                st.error("Invalid credentials. Please try again.")
+        auth_url = sp_oauth.get_authorize_url()
+        st.markdown(f"[Haz clic aquí para iniciar sesión en Spotify]({auth_url})")
     else:
-        st.success("You are already logged in. Redirecting to statistics...")
+        # Si ya hay un token, redirigir a estadísticas
+        token_info = json.loads(cookies['token_info'])
         st.session_state['authenticated'] = True
-        st.experimental_rerun()  # Reload the app to show statistics
+        st.experimental_rerun()  # Recargar la aplicación para mostrar estadísticas
+
+    # Manejo del código de autorización
+    query_params = st.experimental_get_query_params()
+    if 'code' in query_params:
+        code = query_params['code'][0]
+        try:
+            # Obtener el token utilizando el código de autorización
+            token_info = sp_oauth.get_access_token(code)
+            cookies['token_info'] = json.dumps(token_info)
+            cookies.save()
+            st.session_state['authenticated'] = True
+            st.experimental_rerun()  # Recargar para mostrar estadísticas
+        except Exception as e:
+            st.error(f"Error al obtener el token: {e}")
