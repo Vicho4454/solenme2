@@ -35,6 +35,7 @@ def autenticar_usuario():
         # Si no hay token, pedir al usuario que inicie sesión
         auth_url = sp_oauth.get_authorize_url()
         st.markdown(f"[Haz clic aquí para iniciar sesión en Spotify]({auth_url})")
+        return None  # Retorna None si no está autenticado
     else:
         # Recuperar token_info desde JSON almacenado en cookies
         token_info = json.loads(cookies['token_info'])
@@ -47,26 +48,17 @@ def cerrar_sesion():
     if 'token_info' in cookies:
         del cookies['token_info']
         cookies.save()  # Guardar cambios en las cookies
-    if 'authenticated' in st.session_state:
-        del st.session_state['authenticated']
-    
-    # Actualiza la URL eliminando los parámetros para evitar la redirección automática
-    st.experimental_set_query_params()  # Eliminar parámetros de la URL
-    # Recargar la página estableciendo una bandera de recarga
-    st.session_state['reload'] = True  # Bandera para recargar la página
+    st.session_state['authenticated'] = False
+    st.success("Has cerrado sesión. Puedes iniciar sesión nuevamente.")
 
 # Función para cambiar de cuenta
 def cambiar_cuenta():
     cerrar_sesion()  # Eliminar el token y resetear la sesión
-    st.session_state['reload'] = True  # Recargar la página
+    st.session_state['reload'] = True  # Bandera para recargar la página
 
 # Verificar si el usuario está autenticado
-def mostrar_informacion_usuario():
-    if 'token_info' in cookies and cookies['token_info']:
-        # Conexión a la API con el token de usuario
-        token_info = json.loads(cookies['token_info'])
-        sp = spotipy.Spotify(auth=token_info['access_token'])
-
+def mostrar_informacion_usuario(sp):
+    if sp is not None:
         try:
             # Mostrar información del usuario
             user_profile = sp.me()
@@ -156,8 +148,8 @@ def main():
         except Exception as e:
             st.error(f"Error al obtener el token: {e}")
 
-    autenticar_usuario()  # Intentamos autenticar al usuario
-    mostrar_informacion_usuario()  # Mostramos la información del usuario si está autenticado
+    sp = autenticar_usuario()  # Intentamos autenticar al usuario
+    mostrar_informacion_usuario(sp)  # Mostramos la información del usuario si está autenticado
 
 # Ejecutar la aplicación
 if __name__ == "__main__":
