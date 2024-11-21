@@ -3,11 +3,17 @@ import spotipy
 from spotipy.oauth2 import SpotifyOAuth
 import pandas as pd
 import matplotlib.pyplot as plt
+from streamlit_cookies_manager import EncryptedCookieManager
+
+# Configuración de cookies
+cookies = EncryptedCookieManager(prefix="spotify_app")
+if not cookies.ready():
+    st.stop()  # Esperar a que las cookies estén listas
 
 # Configura tus credenciales de Spotify (deberías obtenerlas de Streamlit Secrets)
 CLIENT_ID = st.secrets["spotify"]["client_id"]
 CLIENT_SECRET = st.secrets["spotify"]["client_secret"]
-REDIRECT_URI = 'https://myapp.streamlit.app/'  # Asegúrate de que esta sea la URI correcta
+REDIRECT_URI = 'https://solenme2-test.streamlit.app'  # Asegúrate de que esta sea la URI correcta
 
 # Configuración de autenticación con OAuth
 scope = 'user-top-read user-read-recently-played user-read-private'
@@ -21,40 +27,36 @@ st.title("Estadísticas Personales de Spotify")
 
 # Función para autenticar al usuario
 def autenticar_usuario():
-    if 'token_info' not in st.session_state or not st.session_state['token_info']:
+    if 'token_info' not in cookies or not cookies['token_info']:
         # Si no hay token, pedir al usuario que inicie sesión
         auth_url = sp_oauth.get_authorize_url()
         st.markdown(f"[Haz clic aquí para iniciar sesión en Spotify]({auth_url})")
     else:
-        token_info = st.session_state['token_info']
+        token_info = cookies['token_info']
         sp = spotipy.Spotify(auth=token_info['access_token'])
         return sp
 
 # Función para cerrar sesión
 def cerrar_sesion():
     # Eliminar cualquier dato relacionado con la sesión de usuario
-    if 'token_info' in st.session_state:
-        del st.session_state['token_info']
+    if 'token_info' in cookies:
+        del cookies['token_info']
+        cookies.save()  # Guardar cambios en las cookies
     if 'authenticated' in st.session_state:
         del st.session_state['authenticated']
-    # Reinicia la página para forzar una nueva autenticación
-    st.session_state['logout'] = True
     st.experimental_set_query_params()  # Eliminar parámetros de la URL
-    st.session_state['redirect'] = True  # Indicador para redirigir al usuario a la autenticación
     st.experimental_rerun()  # Recargar la página
 
 # Función para cambiar de cuenta
 def cambiar_cuenta():
     cerrar_sesion()  # Eliminar el token y resetear la sesión
-    st.session_state['change_account'] = True
-    st.session_state['redirect'] = True  # Forzar redirección
     st.experimental_rerun()  # Recargar la página
 
 # Verificar si el usuario está autenticado
 def mostrar_informacion_usuario():
-    if 'token_info' in st.session_state and st.session_state['token_info']:
+    if 'token_info' in cookies and cookies['token_info']:
         # Conexión a la API con el token de usuario
-        token_info = st.session_state['token_info']
+        token_info = cookies['token_info']
         sp = spotipy.Spotify(auth=token_info['access_token'])
 
         try:
@@ -137,7 +139,8 @@ def main():
         try:
             # Obtener el token utilizando el código de autorización
             token_info = sp_oauth.get_access_token(code)
-            st.session_state['token_info'] = token_info
+            cookies['token_info'] = token_info
+            cookies.save()  # Guardar cambios en las cookies
             st.session_state['authenticated'] = True
             st.experimental_rerun()  # Recargar la página para actualizar la sesión
         except Exception as e:
