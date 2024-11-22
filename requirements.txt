@@ -1,6 +1,4 @@
 streamlit
 spotipy
 pandas
-matplotlib
-requests
-streamlit-cookies-manager
+plotly
