@@ -1,8 +1,11 @@
 import streamlit as st
 import pandas as pd
 import plotly.express as px
+import plotly.graph_objects as go
 from spotipy import Spotify
 from spotipy.oauth2 import SpotifyClientCredentials
+import numpy as np
+
 
 # Configura tus credenciales de Spotify
 CLIENT_ID = 'bbabd18955d143f9b0839faee832f0f0'
