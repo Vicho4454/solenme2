@@ -11,7 +11,6 @@ CLIENT_SECRET = '1208ef2a6ebf4ddba1d02083297c16ef'
 auth_manager = SpotifyClientCredentials(client_id=CLIENT_ID, client_secret=CLIENT_SECRET)
 sp = Spotify(auth_manager=auth_manager)
 
-
 # Función para obtener canciones y artistas populares (Global o por región)
 def obtener_top_canciones(region='Global', limite=10):
     """
@@ -28,7 +27,7 @@ def obtener_top_canciones(region='Global', limite=10):
             resultados = sp.search(q='top', type='track', limit=limite)
         else:
             resultados = sp.search(q='top', type='track', market=region, limit=limite)
-
+        
         canciones = []
         for track in resultados.get('tracks', {}).get('items', []):
             canciones.append({
@@ -37,20 +36,19 @@ def obtener_top_canciones(region='Global', limite=10):
                 'Popularidad': track['popularity'],
                 'URL': track['external_urls']['spotify']
             })
-
+        
         if not canciones:
             st.warning("No se encontraron canciones para la configuración seleccionada.")
         return pd.DataFrame(canciones)
-
+    
     except Exception as e:
         st.error(f"Error al obtener datos de Spotify: {str(e)}")
         return pd.DataFrame()
 
-
 # Lista completa de códigos de región permitidos con opción Global
 REGIONES = [
     "Global", "US", "MX", "ES", "FR", "BR", "AR", "CL", "CO", "PE", "UY", "VE",
-    "DE", "GB", "IT", "NL", "AU", "CA", "SE", "NO", "FI", "DK", "IE",
+    "DE", "GB", "IT", "NL", "AU", "CA", "SE", "NO", "FI", "DK", "IE", 
     "JP", "KR", "SG", "HK", "PH", "ID", "MY", "TH", "VN", "TW"
 ]
 
@@ -81,30 +79,75 @@ if st.sidebar.button("Actualizar datos"):
 
     if not df_canciones.empty:
         # Mostrar tabla de datos con estilo moderno
-        st.subheader(
-            f"Top {limite} canciones populares {'globalmente' if region == 'Global' else f'en la región {region}'}")
-        st.dataframe(df_canciones.style.set_properties(**{'text-align': 'left'}).set_table_styles(
-            [dict(selector='th', props=[('text-align', 'left')])]))
+        st.subheader(f"Top {limite} canciones populares {'globalmente' if region == 'Global' else f'en la región {region}'}")
+        st.dataframe(df_canciones.style.set_properties(**{'text-align': 'left'}).set_table_styles([dict(selector='th', props=[('text-align', 'left')])]))
 
         # Graficar popularidad de las canciones con Plotly, colores ajustados
         st.subheader("🎶 Gráfico Interactivo de Popularidad")
         fig = px.bar(
-            df_canciones,
-            x='Popularidad',
-            y='Canción',
-            orientation='h',
+            df_canciones, 
+            x='Popularidad', 
+            y='Canción', 
+            orientation='h', 
             color='Popularidad',
-            color_continuous_scale=['#002F6C', '#D4AF37'],
+            color_continuous_scale=['#002F6C', '#D4AF37'], 
             title="Popularidad de las Canciones",
             height=600  # Aumenta la altura del gráfico
         )
         fig.update_layout(
-            yaxis={'categoryorder': 'total ascending'},
+            yaxis={'categoryorder': 'total ascending'}, 
             plot_bgcolor='#FFFFFF',
             paper_bgcolor='#FFFFFF',
             font_color='#002F6C'
         )
         st.plotly_chart(fig, use_container_width=True)  # Expande el gráfico al ancho completo
+
+        # Cálculos Estadísticos
+        promedio_popularidad = df_canciones['Popularidad'].mean()
+        desviacion_popularidad = df_canciones['Popularidad'].std()
+        mediana_popularidad = df_canciones['Popularidad'].median()
+
+        # Mostrar estadísticas calculadas
+        st.markdown(f"### 📊 Estadísticas de Popularidad")
+        st.write(f"**Promedio de Popularidad**: {promedio_popularidad:.2f}")
+        st.write(f"**Desviación Estándar de Popularidad**: {desviacion_popularidad:.2f}")
+        st.write(f"**Mediana de Popularidad**: {mediana_popularidad:.2f}")
+
+        # Gráfico de Línea - Popularidad Promedio
+        st.subheader("📈 Gráfico de Línea - Popularidad Promedio por Canción")
+        fig_line = go.Figure()
+        fig_line.add_trace(go.Scatter(
+            x=df_canciones['Canción'],
+            y=[promedio_popularidad] * len(df_canciones),
+            mode='lines',
+            name='Promedio de Popularidad',
+            line=dict(color='#D4AF37', dash='dash')
+        ))
+        fig_line.update_layout(
+            title='Popularidad Promedio por Canción',
+            xaxis_title='Canción',
+            yaxis_title='Popularidad',
+            plot_bgcolor='#FFFFFF',
+            paper_bgcolor='#FFFFFF',
+            font_color='#002F6C'
+        )
+        st.plotly_chart(fig_line, use_container_width=True)
+
+        # Histograma - Distribución de la Popularidad
+        st.subheader("📊 Histograma - Distribución de la Popularidad")
+        fig_hist = px.histogram(
+            df_canciones, 
+            x='Popularidad', 
+            nbins=10, 
+            title='Distribución de la Popularidad de Canciones',
+            color_discrete_sequence=['#002F6C']
+        )
+        fig_hist.update_layout(
+            plot_bgcolor='#FFFFFF',
+            paper_bgcolor='#FFFFFF',
+            font_color='#002F6C'
+        )
+        st.plotly_chart(fig_hist, use_container_width=True)
 
         # Mostrar enlaces para escuchar canciones con estilo mejorado
         st.subheader("🎧 Escucha las canciones:")
@@ -112,7 +155,7 @@ if st.sidebar.button("Actualizar datos"):
             st.markdown(
                 f"<div style='color: #002F6C; font-size: 16px; margin-bottom: 10px;'>"
                 f"▶️ <a href='{row['URL']}' target='_blank' style='text-decoration: none; color: #D4AF37;'>"
-                f"{row['Canción']} - {row['Artista']}</a></div>",
+                f"{row['Canción']} - {row['Artista']}</a></div>", 
                 unsafe_allow_html=True
             )
     else:
