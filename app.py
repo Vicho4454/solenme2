@@ -18,20 +18,27 @@ def obtener_top_spotify(region='global', tipo='daily', limite=10):
     try:
         URL = f"https://spotifycharts.com/regional/{region}/{tipo}/latest"
         response = requests.get(URL)
+        
+        # Validar si se accede correctamente a la página
         if response.status_code != 200:
             st.error(f"Error al acceder a Spotify Charts ({response.status_code}).")
             return pd.DataFrame()
 
+        # Parsear el contenido HTML
         soup = BeautifulSoup(response.content, 'html.parser')
         table = soup.find('table', {'class': 'chart-table'})
+        
+        # Validar si la tabla está disponible
         if not table:
-            st.error("No se encontró información en Spotify Charts.")
+            st.error("No se encontró una tabla de datos en Spotify Charts.")
             return pd.DataFrame()
 
-        rows = table.find_all('tr')[1:limite+1]  # Ignora la cabecera
+        rows = table.find_all('tr')[1:limite+1]  # Ignorar encabezado
         canciones = []
         for row in rows:
             cols = row.find_all('td')
+            if len(cols) < 5:  # Validar que las columnas esperadas existan
+                continue
             canciones.append({
                 'Posición': cols[1].text.strip(),
                 'Canción': cols[3].find('strong').text.strip(),
@@ -39,6 +46,11 @@ def obtener_top_spotify(region='global', tipo='daily', limite=10):
                 'Reproducciones': cols[4].text.strip(),
                 'URL': cols[3].find('a')['href']
             })
+
+        # Verificar si se encontraron canciones
+        if not canciones:
+            st.warning("No se encontraron canciones en la tabla.")
+            return pd.DataFrame()
 
         return pd.DataFrame(canciones)
     except Exception as e:
