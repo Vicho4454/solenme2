@@ -3,3 +3,4 @@ spotipy
 pandas
 plotly
 numpy
+bs4
