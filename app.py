@@ -1,75 +1,77 @@
-import requests
 import pandas as pd
+import requests
+from bs4 import BeautifulSoup
 import streamlit as st
 import plotly.express as px
 
-# Configura tu API Key de Last.fm
-API_KEY = 'fa1a9c506fba9490a68538c90dc27767'  # Sustituye con tu clave de API de Last.fm
-BASE_URL = 'http://ws.audioscrobbler.com/2.0/'
-
-# Función para obtener canciones populares
-def obtener_top_canciones(region='Global', limite=10):
+# Función para obtener canciones populares desde Spotify Charts
+def obtener_top_spotify(region='global', tipo='daily', limite=10):
     """
-    Obtiene canciones populares desde Last.fm API.
+    Extrae datos de Spotify Charts con Web Scraping.
     Args:
-        region (str): Región para la consulta ('Global' o nombre del país en inglés).
+        region (str): Región para la consulta (ej. 'global', 'us').
+        tipo (str): 'daily' o 'weekly'.
         limite (int): Número de canciones a obtener.
     Returns:
-        pd.DataFrame: DataFrame con datos de canciones y artistas.
+        pd.DataFrame: DataFrame con información de las canciones.
     """
     try:
-        if region == 'Global':
-            endpoint = f"{BASE_URL}?method=chart.gettoptracks&api_key={API_KEY}&format=json&limit={limite}"
-        else:
-            endpoint = f"{BASE_URL}?method=geo.gettoptracks&country={region}&api_key={API_KEY}&format=json&limit={limite}"
-
-        response = requests.get(endpoint)
-        if response.status_code == 200:
-            data = response.json()
-            tracks = data['tracks']['track'] if region == 'Global' else data['toptracks']['track']
-
-            canciones = [{
-                'Canción': track['name'],
-                'Artista': track['artist']['name'],
-                'URL': track['url'],
-                'Reproducciones': track.get('playcount', 'N/A')
-            } for track in tracks]
-
-            return pd.DataFrame(canciones)
-        else:
-            st.error("Error al obtener datos de Last.fm.")
+        URL = f"https://spotifycharts.com/regional/{region}/{tipo}/latest"
+        response = requests.get(URL)
+        if response.status_code != 200:
+            st.error(f"Error al acceder a Spotify Charts ({response.status_code}).")
             return pd.DataFrame()
+
+        soup = BeautifulSoup(response.content, 'html.parser')
+        table = soup.find('table', {'class': 'chart-table'})
+        if not table:
+            st.error("No se encontró información en Spotify Charts.")
+            return pd.DataFrame()
+
+        rows = table.find_all('tr')[1:limite+1]  # Ignora la cabecera
+        canciones = []
+        for row in rows:
+            cols = row.find_all('td')
+            canciones.append({
+                'Posición': cols[1].text.strip(),
+                'Canción': cols[3].find('strong').text.strip(),
+                'Artista': cols[3].find('span').text.strip(),
+                'Reproducciones': cols[4].text.strip(),
+                'URL': cols[3].find('a')['href']
+            })
+
+        return pd.DataFrame(canciones)
     except Exception as e:
         st.error(f"Error al procesar los datos: {str(e)}")
         return pd.DataFrame()
 
-# Lista de regiones disponibles (puedes ampliar según tus necesidades)
+# Lista de regiones disponibles
 REGIONES = [
-    "Global", "United States", "Mexico", "Spain", "France", "Brazil", "Argentina", 
-    "Chile", "Colombia", "Peru", "Germany", "United Kingdom", "Italy", "Canada", 
-    "Australia", "Japan", "South Korea"
+    "global", "us", "mx", "es", "fr", "br", "ar", "cl", "co", "pe", "de", "gb",
+    "it", "ca", "au", "jp", "kr", "se", "no", "fi"
 ]
 
 # Configuración de la aplicación Streamlit
-st.set_page_config(page_title="Top Canciones en Last.fm", page_icon="🎵", layout="wide")
+st.set_page_config(page_title="Top Canciones en Spotify Charts", page_icon="🎵", layout="wide")
 
 # Barra lateral para configuración
 st.sidebar.header("Configuración")
 region = st.sidebar.selectbox("Selecciona una región", REGIONES)
+tipo = st.sidebar.selectbox("Selecciona el tipo de lista", ["daily", "weekly"])
 limite = st.sidebar.slider("Número de canciones a mostrar", min_value=1, max_value=50, value=10)
 
 # Botón para actualizar datos
 if st.sidebar.button("Actualizar datos"):
-    with st.spinner("Obteniendo datos desde Last.fm..."):
-        df_canciones = obtener_top_canciones(region, limite)
+    with st.spinner("Obteniendo datos desde Spotify Charts..."):
+        df_canciones = obtener_top_spotify(region, tipo, limite)
 
     if not df_canciones.empty:
         # Mostrar tabla de datos
-        st.subheader(f"Top {limite} canciones populares {'globalmente' if region == 'Global' else f'en {region}'}")
+        st.subheader(f"Top {limite} canciones {'globales' if region == 'global' else f'en {region}'} ({tipo})")
         st.dataframe(df_canciones)
 
-        # Gráfico interactivo con Plotly
-        st.subheader("🎶 Gráfico de Popularidad")
+        # Graficar popularidad de las canciones con Plotly
+        st.subheader("🎶 Gráfico de Reproducciones")
         fig = px.bar(
             df_canciones,
             x='Reproducciones',
@@ -87,7 +89,7 @@ if st.sidebar.button("Actualizar datos"):
         )
         st.plotly_chart(fig, use_container_width=True)
 
-        # Enlaces para escuchar canciones
+        # Mostrar enlaces para escuchar canciones
         st.subheader("🎧 Escucha las canciones:")
         for _, row in df_canciones.iterrows():
             st.markdown(
