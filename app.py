@@ -1,112 +1,111 @@
-import pandas as pd
-import requests
-from bs4 import BeautifulSoup
 import streamlit as st
+import requests
+import pandas as pd
 import plotly.express as px
+import numpy as np
 
-# Función para obtener canciones populares desde Spotify Charts
-def obtener_top_spotify(region='global', tipo='daily', limite=10):
-    """
-    Extrae datos de Spotify Charts con Web Scraping.
-    Args:
-        region (str): Región para la consulta (ej. 'global', 'us').
-        tipo (str): 'daily' o 'weekly'.
-        limite (int): Número de canciones a obtener.
-    Returns:
-        pd.DataFrame: DataFrame con información de las canciones.
-    """
+# Configuración de la página
+st.set_page_config(page_title="Deezer Top Charts", page_icon="🎵", layout="wide")
+
+# Título y descripción
+st.title("🎵 Deezer Top Charts")
+st.markdown("Explora las canciones, álbumes, artistas y más populares según los charts oficiales de Deezer.")
+
+# Sidebar: Selección de categoría
+st.sidebar.header("Opciones")
+opcion_categoria = st.sidebar.selectbox("Selecciona una categoría",
+                                        ["Canciones", "Álbumes", "Artistas", "Playlists", "Podcasts"])
+
+# Mapeo de categorías a campos API
+endpoint_fields = {
+    "Canciones": "tracks",
+    "Álbumes": "albums",
+    "Artistas": "artists",
+    "Playlists": "playlists",
+    "Podcasts": "podcasts",
+}
+
+campo_api = endpoint_fields[opcion_categoria]
+
+# Función para obtener datos del chart
+@st.cache
+def obtener_datos_chart(campo_api):
     try:
-        URL = f"https://spotifycharts.com/regional/{region}/{tipo}/latest"
-        response = requests.get(URL)
-        
-        # Validar si se accede correctamente a la página
-        if response.status_code != 200:
-            st.error(f"Error al acceder a Spotify Charts ({response.status_code}).")
+        url = "http://34.176.73.40:8501?endpoint=chart"  # URL del backend
+        response = requests.get(url)
+        response.raise_for_status()
+        data = response.json().get(campo_api, {}).get("data", [])
+
+        if not data:
+            st.warning(f"No se encontraron datos para {opcion_categoria}.")
             return pd.DataFrame()
 
-        # Parsear el contenido HTML
-        soup = BeautifulSoup(response.content, 'html.parser')
-        table = soup.find('table', {'class': 'chart-table'})
-        
-        # Validar si la tabla está disponible
-        if not table:
-            st.error("No se encontró una tabla de datos en Spotify Charts.")
-            return pd.DataFrame()
+        # Procesar datos según la categoría
+        if campo_api == "tracks":
+            return pd.DataFrame([{
+                "Posición": i + 1,
+                "Título": track.get("title", "N/A"),
+                "Artista": track["artist"]["name"],
+                "Álbum": track["album"]["title"],
+                "Duración (s)": track.get("duration", 0),
+                "Preview": track.get("preview", None)
+            } for i, track in enumerate(data)])
+        elif campo_api in ["albums", "playlists", "podcasts"]:
+            return pd.DataFrame([{
+                "Posición": i + 1,
+                "Título": item.get("title", "N/A"),
+                "Link": item.get("link", "N/A")
+            } for i, item in enumerate(data)])
+        elif campo_api == "artists":
+            return pd.DataFrame([{
+                "Posición": i + 1,
+                "Nombre": artist.get("name", "N/A"),
+                "Link": artist.get("link", "N/A")
+            } for i, artist in enumerate(data)])
 
-        rows = table.find_all('tr')[1:limite+1]  # Ignorar encabezado
-        canciones = []
-        for row in rows:
-            cols = row.find_all('td')
-            if len(cols) < 5:  # Validar que las columnas esperadas existan
-                continue
-            canciones.append({
-                'Posición': cols[1].text.strip(),
-                'Canción': cols[3].find('strong').text.strip(),
-                'Artista': cols[3].find('span').text.strip(),
-                'Reproducciones': cols[4].text.strip(),
-                'URL': cols[3].find('a')['href']
-            })
-
-        # Verificar si se encontraron canciones
-        if not canciones:
-            st.warning("No se encontraron canciones en la tabla.")
-            return pd.DataFrame()
-
-        return pd.DataFrame(canciones)
-    except Exception as e:
-        st.error(f"Error al procesar los datos: {str(e)}")
+    except requests.exceptions.RequestException as e:
+        st.error(f"Error al obtener datos: {e}")
         return pd.DataFrame()
 
-# Lista de regiones disponibles
-REGIONES = [
-    "global", "us", "mx", "es", "fr", "br", "ar", "cl", "co", "pe", "de", "gb",
-    "it", "ca", "au", "jp", "kr", "se", "no", "fi"
-]
+# Obtener datos de la categoría seleccionada
+df = obtener_datos_chart(campo_api)
 
-# Configuración de la aplicación Streamlit
-st.set_page_config(page_title="Top Canciones en Spotify Charts", page_icon="🎵", layout="wide")
+# Validar si hay datos
+if df.empty:
+    st.stop()
 
-# Barra lateral para configuración
-st.sidebar.header("Configuración")
-region = st.sidebar.selectbox("Selecciona una región", REGIONES)
-tipo = st.sidebar.selectbox("Selecciona el tipo de lista", ["daily", "weekly"])
-limite = st.sidebar.slider("Número de canciones a mostrar", min_value=1, max_value=50, value=10)
+# Mostrar tabla interactiva
+st.subheader(f"Top {opcion_categoria}")
+st.dataframe(df, use_container_width=True)
 
-# Botón para actualizar datos
-if st.sidebar.button("Actualizar datos"):
-    with st.spinner("Obteniendo datos desde Spotify Charts..."):
-        df_canciones = obtener_top_spotify(region, tipo, limite)
+# Gráficos adicionales si la categoría es "Canciones"
+if campo_api == "tracks":
+    # Histograma
+    st.subheader("Histograma de Duración")
+    fig_hist = px.histogram(df, x="Duración (s)", nbins=10, title="Distribución de la Duración de Canciones")
+    st.plotly_chart(fig_hist, use_container_width=True)
 
-    if not df_canciones.empty:
-        # Mostrar tabla de datos
-        st.subheader(f"Top {limite} canciones {'globales' if region == 'global' else f'en {region}'} ({tipo})")
-        st.dataframe(df_canciones)
+    # Gráfico de barras
+    st.subheader("Gráfico de Barras: Duración por Canción")
+    fig_bar = px.bar(df, x="Título", y="Duración (s)", color="Artista",
+                     title="Duración de Canciones por Artista", labels={"Duración (s)": "Duración (segundos)"})
+    st.plotly_chart(fig_bar, use_container_width=True)
 
-        # Graficar popularidad de las canciones con Plotly
-        st.subheader("🎶 Gráfico de Reproducciones")
-        fig = px.bar(
-            df_canciones,
-            x='Reproducciones',
-            y='Canción',
-            orientation='h',
-            color='Reproducciones',
-            title="Reproducciones por Canción",
-            height=600
-        )
-        fig.update_layout(
-            yaxis={'categoryorder': 'total ascending'},
-            plot_bgcolor='#FFFFFF',
-            paper_bgcolor='#FFFFFF',
-            font_color='#002F6C'
-        )
-        st.plotly_chart(fig, use_container_width=True)
+    # Gráfico de líneas
+    st.subheader("Gráfico de Líneas: Duración por Posición")
+    fig_line = px.line(df, x="Posición", y="Duración (s)", title="Duración por Posición en el Ranking")
+    st.plotly_chart(fig_line, use_container_width=True)
 
-        # Mostrar enlaces para escuchar canciones
-        st.subheader("🎧 Escucha las canciones:")
-        for _, row in df_canciones.iterrows():
-            st.markdown(
-                f"▶️ [**{row['Canción']}** - {row['Artista']}]({row['URL']})",
-                unsafe_allow_html=True
-            )
-    else:
-        st.error("No se encontraron datos para la configuración seleccionada.")
+    # Diagrama de dispersión
+    st.subheader("Dispersión: Posición vs. Duración")
+    fig_scatter = px.scatter(df, x="Posición", y="Duración (s)", color="Artista",
+                             title="Dispersión: Duración vs. Posición", size="Duración (s)")
+    st.plotly_chart(fig_scatter, use_container_width=True)
+
+    # Mapa de calor
+    st.subheader("Mapa de Calor: Correlación entre Variables")
+    if len(df.columns) > 2:  # Asegurarse de tener suficientes columnas
+        numeric_cols = df.select_dtypes(include=[np.number])
+        correlation_matrix = numeric_cols.corr()
+        fig_heatmap = px.imshow(correlation_matrix, text_auto=True, title="Mapa de Calor: Correlaciones")
+        st.plotly_chart(fig_heatmap, use_container_width=True)
